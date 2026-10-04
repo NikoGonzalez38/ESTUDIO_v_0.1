@@ -1,0 +1,542 @@
+import React, { useState, useEffect } from 'react';
+
+// --- CONFIGURACIÓN DE TEMAS VISUALES MEJORADOS ---
+type TemaId = 'pink' | 'dark' | 'blue' | 'emerald';
+
+interface TemaConfig {
+  id: TemaId;
+  nombre: string;
+  bgMain: string;
+  bgCard: string;
+  bgInput: string;
+  border: string;
+  textPrimary: string;
+  textSecondary: string;
+  accentBtn: string;
+  badge: string;
+  navActive: string;
+  glowShadow: string;
+}
+
+const TEMAS: Record<TemaId, TemaConfig> = {
+  pink: {
+    id: 'pink',
+    nombre: 'Rosa 🌸',
+    bgMain: 'bg-[#180e14]',
+    bgCard: 'bg-[#251520]/80',
+    bgInput: 'bg-[#120a0f]',
+    border: 'border-pink-500/20',
+    textPrimary: 'text-pink-50',
+    textSecondary: 'text-pink-300/70',
+    accentBtn: 'bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-400 hover:to-rose-300 text-white shadow-lg shadow-pink-500/25',
+    badge: 'bg-pink-950/60 text-pink-300 border-pink-700/50',
+    navActive: 'bg-pink-500/20 text-pink-200 border-pink-500/40 shadow-inner',
+    glowShadow: 'shadow-pink-950/40'
+  },
+  dark: {
+    id: 'dark',
+    nombre: 'Cyber 🌙',
+    bgMain: 'bg-[#090d16]',
+    bgCard: 'bg-[#111827]/80',
+    bgInput: 'bg-[#060911]',
+    border: 'border-cyan-500/20',
+    textPrimary: 'text-slate-100',
+    textSecondary: 'text-slate-400',
+    accentBtn: 'bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-black font-extrabold shadow-lg shadow-cyan-500/20',
+    badge: 'bg-cyan-950/60 text-cyan-300 border-cyan-800/50',
+    navActive: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-inner',
+    glowShadow: 'shadow-cyan-950/40'
+  },
+  blue: {
+    id: 'blue',
+    nombre: 'Azul 📘',
+    bgMain: 'bg-[#06101e]',
+    bgCard: 'bg-[#0d1d33]/80',
+    bgInput: 'bg-[#030912]',
+    border: 'border-sky-500/20',
+    textPrimary: 'text-sky-50',
+    textSecondary: 'text-sky-300/70',
+    accentBtn: 'bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white shadow-lg shadow-sky-500/25',
+    badge: 'bg-sky-950/60 text-sky-300 border-sky-800/50',
+    navActive: 'bg-sky-500/20 text-sky-200 border-sky-500/40 shadow-inner',
+    glowShadow: 'shadow-sky-950/40'
+  },
+  emerald: {
+    id: 'emerald',
+    nombre: 'Verde 🌿',
+    bgMain: 'bg-[#031812]',
+    bgCard: 'bg-[#072a21]/80',
+    bgInput: 'bg-[#01100b]',
+    border: 'border-emerald-500/20',
+    textPrimary: 'text-emerald-50',
+    textSecondary: 'text-emerald-300/70',
+    accentBtn: 'bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black font-bold shadow-lg shadow-emerald-500/25',
+    badge: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/50',
+    navActive: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40 shadow-inner',
+    glowShadow: 'shadow-emerald-950/40'
+  }
+};
+
+interface PasoEstudio {
+  id: string;
+  texto: string;
+  completado: boolean;
+}
+
+interface Examen {
+  id: number;
+  materia: string;
+  tipo: 'PARCIAL' | 'FINAL' | 'TRABAJO_PRACTICO';
+  fecha: string;
+  temas: string[];
+  planGenerado: PasoEstudio[];
+}
+
+const STORAGE_KEY_DATOS = 'app_estudios_datos_v3';
+const STORAGE_KEY_TEMA = 'app_estudios_tema_v3';
+
+export default function App() {
+  const [temaActual, setTemaActual] = useState<TemaId>(() => {
+    return (localStorage.getItem(STORAGE_KEY_TEMA) as TemaId) || 'pink';
+  });
+
+  const [tab, setTab] = useState<'inicio' | 'generator'>('inicio');
+
+  // Datos guardados
+  const [examenes, setExamenes] = useState<Examen[]>(() => {
+    try {
+      const guardado = localStorage.getItem(STORAGE_KEY_DATOS);
+      return guardado ? JSON.parse(guardado).examenes : [
+        {
+          id: 1,
+          materia: 'Obstetricia I / Física I',
+          tipo: 'FINAL',
+          fecha: new Date(Date.now() + 86400000 * 8).toISOString().split('T')[0],
+          temas: ['Unidad 1: Introducción', 'Unidad 2: Leyes Principales', 'Unidad 3: Diagnóstico y Práctica'],
+          planGenerado: [
+            { id: '1-1', texto: 'Día 1 a 2: Encarar -> Unidad 1: Introducción', completado: true },
+            { id: '1-2', texto: 'Día 3 a 4: Encarar -> Unidad 2: Leyes Principales', completado: false },
+            { id: '1-3', texto: 'Día 5 a 6: Encarar -> Unidad 3: Diagnóstico y Práctica', completado: false },
+            { id: '1-4', texto: 'Día 7: Repaso general de dudas y resúmenes', completado: false },
+            { id: '1-5', texto: 'Día 8 (Pre-Examen): Autoevaluación y descanso temprano', completado: false }
+          ]
+        }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  // Guardado automático
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_TEMA, temaActual);
+  }, [temaActual]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_DATOS, JSON.stringify({ examenes }));
+  }, [examenes]);
+
+  // Formulario Examen
+  const [nuevoExamen, setNuevoExamen] = useState({
+    materia: '',
+    tipo: 'PARCIAL' as 'PARCIAL' | 'FINAL' | 'TRABAJO_PRACTICO',
+    fecha: '',
+    temasTexto: ''
+  });
+
+  // Algoritmo de Generación de Plan con IDs para interactividad
+  const generarPlanDeEstudio = (fechaExamenStr: string, listaTemas: string[]): PasoEstudio[] => {
+    if (listaTemas.length === 0 || !fechaExamenStr) return [];
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaEx = new Date(fechaExamenStr);
+    const diffTiempo = fechaEx.getTime() - hoy.getTime();
+    const diasRestantes = Math.ceil(diffTiempo / (1000 * 3600 * 24));
+
+    if (diasRestantes <= 0) return [{ id: `${Date.now()}-0`, texto: 'El examen es hoy o ya ocurrió. ¡Muchos éxitos!', completado: false }];
+    if (diasRestantes === 1) return [{ id: `${Date.now()}-1`, texto: '⚡ Queda 1 día: Repaso intensivo de resúmenes y descanso nocturno prioritario.', completado: false }];
+
+    const plan: PasoEstudio[] = [];
+    const diasParaEstudio = Math.max(1, diasRestantes - 2);
+    const temasPorBloque = Math.max(1, Math.ceil(listaTemas.length / diasParaEstudio));
+
+    let temaIndex = 0;
+    let diaActual = 1;
+
+    while (temaIndex < listaTemas.length && diaActual <= diasParaEstudio) {
+      const temasDelDia = listaTemas.slice(temaIndex, temaIndex + temasPorBloque);
+      plan.push({
+        id: `${Date.now()}-${diaActual}`,
+        texto: `Día ${diaActual}: Encarar -> ${temasDelDia.join(' + ')}`,
+        completado: false
+      });
+      temaIndex += temasPorBloque;
+      diaActual++;
+    }
+
+    plan.push({
+      id: `${Date.now()}-repaso`,
+      texto: `Día ${diasRestantes - 1}: Repaso de puntos débiles y autoevaluación`,
+      completado: false
+    });
+    plan.push({
+      id: `${Date.now()}-pre`,
+      texto: `Día ${diasRestantes} (Pre-Examen): Lectura ligera y descanso temprano`,
+      completado: false
+    });
+
+    return plan;
+  };
+
+  const agregarExamen = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoExamen.materia || !nuevoExamen.fecha) return;
+
+    const temasArray = nuevoExamen.temasTexto.split(',').map(t => t.trim()).filter(Boolean);
+    const planSugerido = generarPlanDeEstudio(nuevoExamen.fecha, temasArray);
+
+    const item: Examen = {
+      id: Date.now(),
+      materia: nuevoExamen.materia,
+      tipo: nuevoExamen.tipo,
+      fecha: nuevoExamen.fecha,
+      temas: temasArray,
+      planGenerado: planSugerido
+    };
+
+    setExamenes([item, ...examenes]);
+    setNuevoExamen({ materia: '', tipo: 'PARCIAL', fecha: '', temasTexto: '' });
+    setTab('inicio');
+  };
+
+  // Marcar/Desmarcar día de estudio completado
+  const togglePasoCompletado = (examenId: number, pasoId: string) => {
+    setExamenes(examenes.map(ex => {
+      if (ex.id === examenId) {
+        return {
+          ...ex,
+          planGenerado: ex.planGenerado.map(p => p.id === pasoId ? { ...p, completado: !p.completado } : p)
+        };
+      }
+      return ex;
+    }));
+  };
+
+  const eliminarExamen = (id: number) => {
+    if (window.confirm('¿Borrar este examen de la agenda?')) {
+      setExamenes(examenes.filter(e => e.id !== id));
+    }
+  };
+
+  const theme = TEMAS[temaActual];
+
+  return (
+    <div className={`min-h-screen ${theme.bgMain} ${theme.textPrimary} font-sans transition-all duration-300 flex flex-col pb-24 md:pb-8 selection:bg-pink-500 selection:text-white`}>
+      
+      {/* Header flotante Glassmorphism */}
+      <header className={`px-4 sm:px-8 py-3.5 border-b ${theme.border} ${theme.bgCard} backdrop-blur-xl sticky top-0 z-30 shadow-lg`}>
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          
+          <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white font-extrabold flex items-center justify-center text-xl shadow-lg shadow-pink-500/30 active:scale-95 transition-transform">
+                📖
+              </div>
+              <div>
+                <h1 className="font-extrabold tracking-wide text-base leading-tight">STUDY PLANNER</h1>
+                <p className={`text-[11px] font-medium ${theme.textSecondary}`}>Tu Asistente Universitario</p>
+              </div>
+            </div>
+
+            {/* Selector de tema Móvil */}
+            <div className="flex sm:hidden items-center space-x-1 bg-black/40 p-1 rounded-xl border border-white/10 backdrop-blur-md">
+              {(Object.keys(TEMAS) as TemaId[]).map((tKey) => (
+                <button
+                  key={tKey}
+                  onClick={() => setTemaActual(tKey)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all ${temaActual === tKey ? 'bg-white text-black shadow-md' : 'text-white/50 hover:text-white'}`}
+                >
+                  {TEMAS[tKey].nombre.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Navegación Desktop */}
+          <nav className="hidden md:flex space-x-2 bg-black/20 p-1 rounded-2xl border border-white/5">
+            <button
+              onClick={() => setTab('inicio')}
+              className={`px-5 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${tab === 'inicio' ? theme.navActive : 'border-transparent text-white/60 hover:text-white'}`}
+            >
+              📌 Tablero de Exámenes
+            </button>
+            <button
+              onClick={() => setTab('generator')}
+              className={`px-5 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${tab === 'generator' ? theme.navActive : 'border-transparent text-white/60 hover:text-white'}`}
+            >
+              ⚡ Generador de Plan de Estudio
+            </button>
+          </nav>
+
+          {/* Selector de tema Desktop */}
+          <div className="hidden sm:flex items-center space-x-1 bg-black/30 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
+            {(Object.keys(TEMAS) as TemaId[]).map((tKey) => (
+              <button
+                key={tKey}
+                onClick={() => setTemaActual(tKey)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${temaActual === tKey ? 'bg-white text-black shadow-md scale-105' : 'text-white/60 hover:text-white'}`}
+              >
+                {TEMAS[tKey].nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full space-y-6">
+        
+        {/* TAB 1: TABLERO / INICIO */}
+        {tab === 'inicio' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-end">
+              <div>
+                <h2 className="text-xl font-extrabold tracking-tight">Mis Exámenes</h2>
+                <p className={`text-xs ${theme.textSecondary}`}>Fechas cargadas e itinerario diario de estudio</p>
+              </div>
+
+              <button
+                onClick={() => setTab('generator')}
+                className={`md:hidden px-4 py-2.5 rounded-2xl text-xs font-extrabold active:scale-95 transition-all ${theme.accentBtn}`}
+              >
+                + Nuevo Plan
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {examenes.length === 0 ? (
+                <div className={`col-span-full ${theme.bgCard} p-10 rounded-3xl border ${theme.border} text-center ${theme.textSecondary} text-xs space-y-4 shadow-xl backdrop-blur-md`}>
+                  <div className="text-4xl">📚</div>
+                  <p className="text-sm font-semibold">No tenés exámenes agendados en este momento.</p>
+                  <button onClick={() => setTab('generator')} className={`px-5 py-3 rounded-2xl font-extrabold text-xs active:scale-95 transition-all ${theme.accentBtn}`}>
+                    Generar el primer plan inteligente
+                  </button>
+                </div>
+              ) : (
+                examenes.map((ex) => {
+                  const diasFaltantes = Math.ceil((new Date(ex.fecha).getTime() - new Date().setHours(0,0,0,0)) / (1000 * 3600 * 24));
+                  const pasostotales = ex.planGenerado?.length || 0;
+                  const pasosCompletados = ex.planGenerado?.filter(p => p.completado).length || 0;
+                  const porcentajeProgreso = pasostotales > 0 ? Math.round((pasosCompletados / pasostotales) * 100) : 0;
+
+                  return (
+                    <div key={ex.id} className={`${theme.bgCard} border ${theme.border} rounded-3xl p-6 space-y-4 shadow-2xl backdrop-blur-md relative hover:border-white/20 transition-all duration-300 hover:scale-[1.01]`}>
+                      
+                      {/* Encabezado Tarjeta */}
+                      <div className="flex justify-between items-start gap-2">
+                        <span className={`text-[10px] font-extrabold tracking-wider px-3 py-1 rounded-full border ${theme.badge}`}>
+                          {ex.tipo}
+                        </span>
+
+                        <span className={`text-xs font-extrabold px-3 py-1 rounded-xl border backdrop-blur-md transition-all ${
+                          diasFaltantes <= 3 
+                            ? 'bg-rose-950/80 text-rose-300 border-rose-800 animate-pulse' 
+                            : diasFaltantes <= 7 
+                            ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                            : 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                        }`}>
+                          {diasFaltantes > 0 ? `⏳ Faltan ${diasFaltantes} días` : '¡Hoy rindo!'}
+                        </span>
+                      </div>
+
+                      {/* Título & Fecha */}
+                      <div>
+                        <h3 className="font-extrabold text-lg text-white tracking-wide">{ex.materia}</h3>
+                        <p className={`text-xs ${theme.textSecondary}`}>📅 Rinde el: <strong className="text-white">{ex.fecha}</strong></p>
+                      </div>
+
+                      {/* Barra de Progreso de Estudio */}
+                      {pasostotales > 0 && (
+                        <div className="space-y-1.5 bg-black/20 p-3 rounded-2xl border border-white/5">
+                          <div className="flex justify-between text-[11px] font-bold">
+                            <span className={theme.textSecondary}>Progreso de preparación:</span>
+                            <span className="text-emerald-400 font-mono">{porcentajeProgreso}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/5">
+                            <div 
+                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" 
+                              style={{ width: `${porcentajeProgreso}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Checklist Interactivo */}
+                      {ex.planGenerado && ex.planGenerado.length > 0 && (
+                        <div className="space-y-2 pt-1">
+                          <p className="text-[11px] font-bold text-slate-300 tracking-wide uppercase">📌 Hoja de ruta guiada (Tocá para completar):</p>
+                          <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                            {ex.planGenerado.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => togglePasoCompletado(ex.id, p.id)}
+                                className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center space-x-2.5 transition-all duration-200 border ${
+                                  p.completado
+                                    ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300/60 line-through'
+                                    : 'bg-black/30 hover:bg-black/50 border-white/5 text-slate-200'
+                                }`}
+                              >
+                                <span className={`w-4 h-4 rounded-md border flex items-center justify-center text-[10px] font-bold transition-colors ${
+                                  p.completado ? 'bg-emerald-500 border-emerald-400 text-black' : 'border-white/30 bg-black/20'
+                                }`}>
+                                  {p.completado ? '✓' : ''}
+                                </span>
+                                <span className="flex-1 leading-snug">{p.texto}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pie de Tarjeta */}
+                      <div className="flex justify-end pt-2 border-t border-white/10">
+                        <button
+                          onClick={() => eliminarExamen(ex.id)}
+                          className="text-xs text-rose-400/80 hover:text-rose-300 font-medium transition-colors flex items-center space-x-1"
+                        >
+                          <span>🗑️ Eliminar Examen</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: GENERADOR DE PLAN */}
+        {tab === 'generator' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Formulario Estilizado */}
+            <div className={`${theme.bgCard} border ${theme.border} p-6 rounded-3xl space-y-5 h-fit shadow-2xl backdrop-blur-md`}>
+              <div>
+                <h3 className="font-extrabold text-base text-white">Nuevo Examen</h3>
+                <p className={`text-xs ${theme.textSecondary}`}>Generá la hoja de ruta inteligente paso a paso</p>
+              </div>
+
+              <form onSubmit={agregarExamen} className="space-y-4 text-xs">
+                <div>
+                  <label className="block mb-1.5 font-bold text-slate-200">Materia / Asignatura:</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Obstetricia I / Física / Inglés"
+                    value={nuevoExamen.materia}
+                    onChange={e => setNuevoExamen({ ...nuevoExamen, materia: e.target.value })}
+                    className={`w-full ${theme.bgInput} border ${theme.border} rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-colors`}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block mb-1.5 font-bold text-slate-200">Tipo Evaluativo:</label>
+                    <select
+                      value={nuevoExamen.tipo}
+                      onChange={e => setNuevoExamen({ ...nuevoExamen, tipo: e.target.value as any })}
+                      className={`w-full ${theme.bgInput} border ${theme.border} rounded-2xl px-3 py-3 text-xs text-white focus:outline-none`}
+                    >
+                      <option value="PARCIAL">Parcial</option>
+                      <option value="FINAL">Final</option>
+                      <option value="TRABAJO_PRACTICO">Trabajo Práctico</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1.5 font-bold text-slate-200">Fecha Examen:</label>
+                    <input
+                      type="date"
+                      value={nuevoExamen.fecha}
+                      onChange={e => setNuevoExamen({ ...nuevoExamen, fecha: e.target.value })}
+                      className={`w-full ${theme.bgInput} border ${theme.border} rounded-2xl px-3 py-3 text-xs text-white focus:outline-none`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1.5 font-bold text-slate-200">Temas / Unidades (separados por coma):</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Ej: Unidad 1, Unidad 2, Anatomía pélvica, Casos clínicos"
+                    value={nuevoExamen.temasTexto}
+                    onChange={e => setNuevoExamen({ ...nuevoExamen, temasTexto: e.target.value })}
+                    className={`w-full ${theme.bgInput} border ${theme.border} rounded-2xl p-3.5 text-xs text-white focus:outline-none leading-relaxed resize-none`}
+                  ></textarea>
+                </div>
+
+                <button
+                  type="submit"
+                  className={`w-full py-3.5 rounded-2xl font-extrabold text-xs transition-all active:scale-95 shadow-xl ${theme.accentBtn}`}
+                >
+                  ⚡ Calcular y Generar Plan
+                </button>
+              </form>
+            </div>
+
+            {/* Previsualización de Planes Activos */}
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="font-extrabold text-base">Planes de Estudio Generados</h3>
+              {examenes.map((ex) => (
+                <div key={ex.id} className={`${theme.bgCard} border ${theme.border} p-6 rounded-3xl space-y-4 shadow-xl backdrop-blur-md`}>
+                  <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                    <div>
+                      <h4 className="font-extrabold text-base text-white">{ex.materia}</h4>
+                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${theme.badge}`}>
+                        {ex.tipo}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono text-amber-300 font-bold bg-black/30 px-3 py-1 rounded-xl border border-white/5">
+                      📅 {ex.fecha}
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">🗺️ Secuencia sugerida día por día:</p>
+                  <div className="space-y-2">
+                    {ex.planGenerado?.map((paso) => (
+                      <div key={paso.id} className="bg-black/30 p-3 rounded-2xl border border-white/5 text-xs text-slate-200 flex items-start space-x-2.5">
+                        <span className="text-pink-400 font-bold">•</span>
+                        <span className="leading-relaxed">{paso.texto}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* BARRA MÓVIL TÁCTIL INFERIOR (Glassmorphism) */}
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${theme.bgCard} border-t ${theme.border} px-6 py-2.5 flex justify-around items-center z-40 backdrop-blur-2xl shadow-2xl`}>
+        <button
+          onClick={() => setTab('inicio')}
+          className={`flex flex-col items-center space-y-1 text-[11px] font-extrabold transition-all duration-200 ${tab === 'inicio' ? 'text-pink-400 scale-110' : 'text-slate-400/80'}`}
+        >
+          <span className="text-xl">📌</span>
+          <span>Tablero</span>
+        </button>
+
+        <button
+          onClick={() => setTab('generator')}
+          className={`flex flex-col items-center space-y-1 text-[11px] font-extrabold transition-all duration-200 ${tab === 'generator' ? 'text-pink-400 scale-110' : 'text-slate-400/80'}`}
+        >
+          <span className="text-xl">⚡</span>
+          <span>Crear Plan</span>
+        </button>
+      </div>
+    </div>
+  );
+}
